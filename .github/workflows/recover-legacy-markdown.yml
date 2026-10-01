@@ -1,0 +1,49 @@
+name: Recover legacy posts to Mizuki
+
+on:
+  push:
+    branches:
+      - recovery/markdown-mizuki
+    paths:
+      - scripts/recover_hexo_to_mizuki.py
+      - .github/workflows/recover-legacy-markdown.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  recover:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out recovery branch
+        uses: actions/checkout@v4
+        with:
+          ref: recovery/markdown-mizuki
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install recovery dependencies
+        run: python -m pip install --disable-pip-version-check beautifulsoup4 markdownify
+
+      - name: Recover 41 posts
+        run: python scripts/recover_hexo_to_mizuki.py
+
+      - name: Commit recovered Markdown
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add recovered-mizuki
+          if git diff --cached --quiet; then
+            echo "No recovery changes to commit."
+          else
+            git commit -m "Recover 41 legacy posts as Mizuki Markdown"
+            git push origin HEAD:recovery/markdown-mizuki
+          fi
